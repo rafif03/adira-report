@@ -1,0 +1,52 @@
+Login information for development
+
+Local URL:
+http://localhost:8000
+
+Admin users:
+email: admin1@example.com
+email: admin2@example.com
+password: password
+
+Guest users:
+email: guest1@example.com
+email: guest2@example.com
+password: password
+
+Other seeded account:
+email: test@example.com
+password: password
+
+Example role users (each uses password "password"):
+sumbagut1@example.com
+sumbagut2@example.com
+sumbateng1@example.com
+sumbateng2@example.com
+sumbagsel1@example.com
+sumbagsel2@example.com
+jabo11@example.com
+jabo12@example.com
+jabo21@example.com
+jabo22@example.com
+jabar1@example.com
+jabar2@example.com
+jateng1@example.com
+jateng2@example.com
+jatim1@example.com
+jatim2@example.com
+bnt1@example.com
+bnt2@example.com
+sultan1@example.com
+sultan2@example.com
+pasima1@example.com
+pasima2@example.com
+kalimantan1@example.com
+kalimantan2@example.com
+
+Notes:
+- Admin can access /admin/roles to manage roles.
+- Default password is 'password' for seeded accounts — change in production.
+- To run app: php artisan serve and (optional) npm run dev for assets.
+
+Last updated: 2026-01-04
+Active developer account (quick reference): jabo21@example.com (password: password)
