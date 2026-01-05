@@ -40,7 +40,10 @@ class DeleteUserForm extends Component
             $user->delete();
         } else {
             // Use a hard delete to allow email reuse and cascade monthly targets.
-            // (Reports are protected by FK restrict, but we are in the no-report branch.)
+            // First delete sessions and monthly targets to avoid FK constraints, then delete user.
+            DB::table('sessions')->where('user_id', $user->id)->delete();
+            DB::table('monthly_car_targets')->where('user_id', $user->id)->delete();
+            DB::table('monthly_motor_targets')->where('user_id', $user->id)->delete();
             DB::table('users')->where('id', $user->id)->delete();
         }
 

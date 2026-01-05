@@ -3,7 +3,7 @@
 
     <div class="mb-4">
         <label class="block text-sm mb-1">Filter Role</label>
-        <select wire:model="filterRoleId" class="w-full max-w-sm rounded border px-2 py-1 bg-white text-black dark:bg-zinc-900 dark:text-white">
+        <select wire:model="filterRoleId" wire:change="$refresh" class="w-full max-w-sm rounded border px-2 py-1 bg-white text-black dark:bg-zinc-900 dark:text-white">
             <option value="">-- All roles --</option>
             @foreach($roles as $role)
                 <option value="{{ $role->id }}">{{ $role->name }}</option>
@@ -49,15 +49,24 @@
                     @foreach($users as $user)
                         <tr class="border-t">
                             <td class="px-2 py-1">{{ $user->id }}</td>
-                            <td class="px-2 py-1">{{ $user->name }}</td>
+                            <td class="px-2 py-1">
+                                {{ $user->name }}
+                                @if($user->trashed())
+                                    <span class="text-xs bg-red-200 text-red-800 dark:bg-red-700 dark:text-white px-2 py-0.5 rounded ml-1">deleted</span>
+                                @endif
+                            </td>
                             <td class="px-2 py-1">{{ $user->email }}</td>
                             <td class="px-2 py-1">{{ $user->role?->name ?? '-' }}</td>
                             <td class="px-2 py-1">
-                                <flux:button wire:click="edit({{ $user->id }})" onclick="window.scrollTo({ top: 0, behavior: 'smooth' })" size="sm" variant="ghost" class="mr-2">{{ __('Edit role') }}</flux:button>
-                                @if($user->role?->slug === 'admin')
-                                    <flux:button size="sm" variant="ghost" disabled>Admin</flux:button>
+                                @if($user->trashed())
+                                    <flux:button wire:click="confirmForceDelete({{ $user->id }})" size="sm" variant="danger">Force Delete</flux:button>
                                 @else
-                                    <flux:button wire:click="confirmDelete({{ $user->id }})" size="sm" variant="danger">{{ __('Delete') }}</flux:button>
+                                    <flux:button wire:click="edit({{ $user->id }})" onclick="window.scrollTo({ top: 0, behavior: 'smooth' })" size="sm" variant="ghost" class="mr-2">{{ __('Edit role') }}</flux:button>
+                                    @if($user->role?->slug === 'admin')
+                                        <flux:button size="sm" variant="ghost" disabled>Admin</flux:button>
+                                    @else
+                                        <flux:button wire:click="confirmDelete({{ $user->id }})" size="sm" variant="danger">{{ __('Delete') }}</flux:button>
+                                    @endif
                                 @endif
                             </td>
                         </tr>
@@ -96,12 +105,14 @@
                 @if($confirmingDeleteWillForce)
                     <p class="mt-3 text-sm">
                         Akun ini akan <strong>dihapus permanen (force delete)</strong> karena user belum pernah menginput laporan harian.
-                        Target bulanan user juga akan ikut terhapus (cascading).
                     </p>
                     <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
                         Setelah force delete, email user bisa digunakan lagi untuk register.
                     </p>
                 @else
+                    <p class="mt-3 text-sm text-red-600 dark:text-red-300">
+                        <strong>Tindakan ini tidak bisa dibatalkan!</strong>
+                    </p>
                     <p class="mt-3 text-sm">
                         Akun ini akan <strong>di-soft delete</strong> karena user sudah pernah menginput laporan harian.
                         Riwayat laporan tetap tersimpan.
@@ -119,6 +130,35 @@
                 <div class="mt-4 flex justify-end gap-2">
                     <flux:button wire:click="cancelConfirm" variant="ghost">{{ __('Cancel') }}</flux:button>
                     <flux:button wire:click.prevent="confirmDeletion" variant="danger">{{ __('Delete') }}</flux:button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if($confirmingForceDeleteId)
+        <div class="fixed inset-0 flex items-center justify-center">
+            <div class="fixed inset-0 bg-black/80 z-[9998]"></div>
+
+            <div class="fixed left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2 w-full max-w-md rounded bg-white text-black dark:bg-zinc-900 dark:text-white p-6 z-[100000]">
+                <h3 class="text-lg font-semibold">Force Delete Soft-Deleted User</h3>
+                <p class="mt-2">
+                    User: <strong>{{ $forceDeleteUserName ?? '—' }}</strong><br>
+                    Email: <strong>{{ $forceDeleteUserEmail ?? '—' }}</strong>
+                </p>
+
+                <p class="mt-3 text-sm text-red-600 dark:text-red-300">
+                    <strong>Tindakan ini tidak bisa dibatalkan!</strong> User akan dihapus permanen dari sistem.
+                    Email user bisa digunakan lagi untuk register.
+                </p>
+
+                <flux:subheading class="mt-3">Please enter your admin password to confirm force delete.</flux:subheading>
+                <div class="mt-2">
+                    <flux:input wire:model.defer="forceDeletePassword" :label="__('Admin Password')" type="password" />
+                </div>
+
+                <div class="mt-4 flex justify-end gap-2">
+                    <flux:button wire:click="cancelForceDelete" variant="ghost">{{ __('Cancel') }}</flux:button>
+                    <flux:button wire:click.prevent="confirmForceDeleteUser" variant="danger">{{ __('Force Delete') }}</flux:button>
                 </div>
             </div>
         </div>

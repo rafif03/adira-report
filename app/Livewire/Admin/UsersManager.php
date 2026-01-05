@@ -26,6 +26,11 @@ class UsersManager extends Component
     public $confirmingDeleteUserName = null;
     public $confirmingDeleteUserEmail = null;
 
+    public $confirmingForceDeleteId = null;
+    public $forceDeletePassword = '';
+    public $forceDeleteUserName = null;
+    public $forceDeleteUserEmail = null;
+
     public $showFlash = false;
     public $flashMessage = '';
     public $flashType = 'success';
@@ -34,7 +39,7 @@ class UsersManager extends Component
     {
         $roles = Role::orderBy('id', 'asc')->get();
 
-        $usersQuery = User::with('role')->orderBy('id', 'asc');
+        $usersQuery = User::with('role')->withTrashed()->orderBy('id', 'asc');
         if ($this->filterRoleId !== '' && $this->filterRoleId !== null) {
             $usersQuery->where('role_id', (int) $this->filterRoleId);
         }
@@ -145,6 +150,79 @@ class UsersManager extends Component
         $this->confirmingDeleteHasReports = false;
         $this->confirmingDeleteUserName = null;
         $this->confirmingDeleteUserEmail = null;
+    }
+
+    public function confirmForceDelete($id)
+    {
+        $user = User::withTrashed()->find($id);
+        if (! $user) {
+            $this->flash('User not found.', 'error');
+            return;
+        }
+
+        if (! $user->trashed()) {
+            $this->flash('User tidak soft-deleted. Gunakan Delete button untuk soft delete.', 'error');
+            return;
+        }
+
+        $this->confirmingForceDeleteId = $user->id;
+        $this->forceDeleteUserName = $user->name;
+        $this->forceDeleteUserEmail = $user->email;
+        $this->forceDeletePassword = '';
+    }
+
+    public function cancelForceDelete()
+    {
+        $this->confirmingForceDeleteId = null;
+        $this->forceDeletePassword = '';
+        $this->forceDeleteUserName = null;
+        $this->forceDeleteUserEmail = null;
+    }
+
+    public function confirmForceDeleteUser()
+    {
+        if (! $this->confirmingForceDeleteId) {
+            return;
+        }
+
+        $user = User::withTrashed()->find($this->confirmingForceDeleteId);
+        if (! $user) {
+            $this->flash('User not found.', 'error');
+            $this->cancelForceDelete();
+            return;
+        }
+
+        if (! $user->trashed()) {
+            $this->flash('User tidak soft-deleted.', 'error');
+            $this->cancelForceDelete();
+            return;
+        }
+
+        // Require admin password confirmation
+        $this->validate(["forceDeletePassword" => ['required', 'string']]);
+
+        $admin = Auth::user();
+        if (! $admin || ! Hash::check($this->forceDeletePassword, $admin->password)) {
+            $this->flash('Invalid admin password.', 'error');
+            $this->forceDeletePassword = '';
+            return;
+        }
+
+        try {
+            // Delete all related records first to avoid FK constraints
+            DB::table('sessions')->where('user_id', $user->id)->delete();
+            DB::table('monthly_car_targets')->where('user_id', $user->id)->delete();
+            DB::table('monthly_motor_targets')->where('user_id', $user->id)->delete();
+            DB::table('car_reports')->where('submitted_by', $user->id)->delete();
+            DB::table('motor_reports')->where('submitted_by', $user->id)->delete();
+            $user->forceDelete();
+            $this->flash('User dihapus permanen (force delete). Semua riwayat laporan telah dihapus. Email bisa digunakan lagi untuk register.', 'success');
+        } catch (\Throwable $e) {
+            $this->flash('Gagal menghapus user permanen: ' . $e->getMessage(), 'error');
+            return;
+        }
+
+        $this->cancelForceDelete();
     }
 
     public function confirmDeletion()
